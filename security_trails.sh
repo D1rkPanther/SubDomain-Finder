@@ -1,39 +1,48 @@
-#!/bin/bash
+import requests
+import json
+import os
 
-echo "
--+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
--     ..| subdomain-apiST v1.0 |..     -
--       site: securitytrails.com       -
--            Twitter: az7rb            -
--+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	"
-	 
-	Subdomain() {
-	requestSub="$(curl -s --request GET \
-		 --url https://api.securitytrails.com/v1/domain/$domain/subdomains \
-		 --header 'APIKEY: x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0x0' \
-		 --header 'Accept: application/json')"
-		 
-			 echo $requestSub > apiST.txt
-			 cat apiST.txt  | jq .subdomains | awk -v domain=$domain -F\" '{print $2 "." domain}' | sed '$d' | sed '1d'  > output/$domain.txt
-			 echo -e "\e[32m[+]\e[0m "$(cat apiST.txt | jq .subdomain_count | awk '{print "I found in API "" \033[31m"  $0 "\033[0m"" subdomain" }')
-			 rm apiST.txt
-			 echo ""
-			 cat output/$domain.txt
-			 echo ""
-			 echo -e "\e[32m[+]\e[0m Total Save will be \e[31m"$(cat output/$domain.txt | wc -l)"\e[0m subdomains only"
-			 echo -e "\e[32m[+]\e[0m Output saved in output/$domain.txt"
-}	 
+def print_banner():
+    banner = """
+    -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    -     ..| subdomain-apiST v1.0 |..     -
+    -       site: securitytrails.com       -
+    -            Twitter: az7rb            -
+    -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    """
+    print(banner)
 
-if [ -z $1 ]
-        then
-                echo "USAGE: $0 [domain.com] "
-                exit
-        else
-                domain=$1
-fi
+def get_subdomains(domain):
+    url = f"https://api.securitytrails.com/v1/domain/{domain}/subdomains"
+    headers = {
+        'APIKEY': '',
+        'Accept': 'application/json'
+    }
+    response = requests.get(url, headers=headers)
+    data = response.json()
 
-if [ -z $2 ]
-then
-Subdomain
-fi
+    subdomains = [f"{subdomain}.{domain}" for subdomain in data['subdomains']]
+    subdomain_count = data['subdomain_count']
+
+    output_file = f"output/{domain}.txt"
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    with open(output_file, 'w') as f:
+        for subdomain in subdomains:
+            f.write(subdomain + '\n')
+
+    print(f"\033[32m[+]\033[0m I found in API \033[31m{subdomain_count}\033[0m subdomains")
+    print(f"\033[32m[+]\033[0m Total Save will be \033[31m{len(subdomains)}\033[0m subdomains only")
+    print(f"\033[32m[+]\033[0m Output saved in {output_file}")
+
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) < 2:
+        print("USAGE: python script.py [domain.com]")
+        sys.exit(1)
+
+    domain = sys.argv[1]
+    print_banner()
+    get_subdomains(domain)
+
